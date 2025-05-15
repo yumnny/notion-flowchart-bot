@@ -2,7 +2,7 @@ name: Update Flowchart
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # 10分ごとに実行
+    - cron: '*/1 * * * *' # 10分ごとに実行
   workflow_dispatch:
 
 jobs:
