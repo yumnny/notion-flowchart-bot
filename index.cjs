@@ -1,19 +1,16 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { Client } from '@notionhq/client';
+const fs = require('fs').promises;
+const path = require('path');
+const { Client } = require('@notionhq/client');
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const databaseId = process.env.DATABASE_ID;
 
-// NotionのFlowchartプロパティからMermaidコードを取得する例
 async function getFlowchartCode() {
   const response = await notion.databases.query({ database_id: databaseId });
   if (!response.results.length) {
     console.log('データベースにアイテムがありません。');
     return 'graph TD\nNo data found';
   }
-  // ここは1件目のページのFlowchartプロパティのrich_textをそのまま返す例
-  // 必要に応じて複数行まとめたり変換してください
   const page = response.results[0];
   const flowchartProp = page.properties.Flowchart;
   if (!flowchartProp || !flowchartProp.rich_text.length) {
