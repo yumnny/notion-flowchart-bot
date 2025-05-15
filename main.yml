@@ -1,0 +1,24 @@
+name: Generate Flowchart from Notion
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # 10分ごとに実行
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run index.js
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          DATABASE_ID: ${{ secrets.DATABASE_ID }}
+        run: node index.js
