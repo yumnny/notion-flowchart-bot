@@ -1,34 +1,33 @@
-name: Generate Flowchart and Deploy to GitHub Pages
+name: Generate Flowchart and Deploy
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # 5分ごとに実行
-  workflow_dispatch:       # 手動実行も可能
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Run flowchart generation script
-      run: node index.cjs
-      env:
-        NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-        DATABASE_ID: ${{ secrets.DATABASE_ID }}
+      - name: Run script
+        run: node index.cjs
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          DATABASE_ID: ${{ secrets.DATABASE_ID }}
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./public
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
