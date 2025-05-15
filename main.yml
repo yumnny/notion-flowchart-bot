@@ -22,3 +22,9 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           DATABASE_ID: ${{ secrets.DATABASE_ID }}
         run: node index.js
+
+- name: Update Notion
+  run: node update-notion.js
+  env:
+    NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+    DATABASE_ID: ${{ secrets.DATABASE_ID }}
