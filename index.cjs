@@ -1,41 +1,56 @@
-const fs = require('fs').promises;
-const path = require('path');
 const { Client } = require('@notionhq/client');
+const fs = require('fs');
 
+// Notion クライアントの初期化
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const databaseId = process.env.DATABASE_ID;
 
-async function getFlowchartCode() {
-  const response = await notion.databases.query({ database_id: databaseId });
-  if (!response.results.length) {
-    console.log('データベースにアイテムがありません。');
-    return 'graph TD\nNo data found';
-  }
-  const page = response.results[0];
-  const flowchartProp = page.properties.Flowchart;
-  if (!flowchartProp || !flowchartProp.rich_text.length) {
-    console.log('Flowchartプロパティが空です。');
-    return 'graph TD\nNo flowchart data';
-  }
-  const flowchartCode = flowchartProp.rich_text.map(t => t.plain_text).join('\n');
-  return flowchartCode;
-}
-
-async function updateHtml(flowchartCode) {
-  const htmlPath = path.join(process.cwd(), 'public', 'index.html');
-  let html = await fs.readFile(htmlPath, 'utf-8');
-  html = html.replace('%%FLOWCHART_CODE%%', flowchartCode);
-  await fs.writeFile(htmlPath, html, 'utf-8');
-  console.log('public/index.html を更新しました。');
-}
-
-async function main() {
+(async () => {
   try {
-    const flowchartCode = await getFlowchartCode();
-    await updateHtml(flowchartCode);
-  } catch (error) {
-    console.error('エラー:', error);
-  }
-}
+    const response = await notion.databases.query({
+      database_id: databaseId,
+    });
 
-main();
+    const pages = response.results;
+    const edges = [];
+
+    for (const page of pages) {
+      const props = page.properties;
+
+      const from = props.Name?.title?.[0]?.plain_text;
+      const nextRaw = props.Next?.rich_text?.[0]?.plain_text;
+
+      if (!from || !nextRaw) continue;
+
+      const nextNodes = nextRaw.split(',').map(n => n.trim());
+
+      for (const to of nextNodes) {
+        if (to) edges.push(`${from} --> ${to}`);
+      }
+    }
+
+    const mermaid = `graph TD\n${edges.join('\n')}`;
+
+    console.log('Generated Mermaid:\n', mermaid);
+
+    // Notion に戻す
+    for (const page of pages) {
+      await notion.pages.update({
+        page_id: page.id,
+        properties: {
+          Flowchart: {
+            rich_text: [
+              {
+                text: {
+                  content: mermaid,
+                },
+              },
+            ],
+          },
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+})();
