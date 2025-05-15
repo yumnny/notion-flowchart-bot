@@ -19,7 +19,7 @@ jobs:
         run: npm install
 
       - name: Run script
-        run: node index.js
+        run: node index.cjs
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           DATABASE_ID: ${{ secrets.DATABASE_ID }}
