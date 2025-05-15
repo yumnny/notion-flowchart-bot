@@ -1,64 +1,44 @@
-const { Client } = require('@notionhq/client');
-require('dotenv').config();
+import fs from 'fs/promises';
+import path from 'path';
+import { Client } from '@notionhq/client';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const databaseId = process.env.DATABASE_ID;
 
-async function fetchDatabaseItems() {
-  const response = await notion.databases.query({
-    database_id: databaseId,
-    page_size: 100,
-  });
-  return response.results;
-}
-
-async function updatePage(pageId, flowchartText) {
-  await notion.pages.update({
-    page_id: pageId,
-    properties: {
-      Flowchart: {
-        rich_text: [
-          {
-            type: 'text',
-            text: {
-              content: flowchartText,
-            },
-          },
-        ],
-      },
-    },
-  });
-}
-
-function buildEdgesFromItem(name, nextRaw) {
-  if (!nextRaw) return [];
-
-  return nextRaw.split(',').map(target => {
-    const to = target.trim();
-    if (to.length === 0) return null;
-    return `${name} --> ${to}`;
-  }).filter(Boolean);
-}
-
-(async () => {
-  const pages = await fetchDatabaseItems();
-
-  let allEdges = [];
-
-  pages.forEach(page => {
-    const props = page.properties;
-    const name = props.Name?.title?.[0]?.text?.content || '';
-    const next = props.Next?.rich_text?.[0]?.text?.content || '';
-
-    const edges = buildEdgesFromItem(name, next);
-    allEdges.push(...edges);
-  });
-
-  const mermaidText = `\`\`\`mermaid\ngraph TD\n${allEdges.join('\n')}\n\`\`\``;
-
-  for (const page of pages) {
-    await updatePage(page.id, mermaidText);
+// NotionのFlowchartプロパティからMermaidコードを取得する例
+async function getFlowchartCode() {
+  const response = await notion.databases.query({ database_id: databaseId });
+  if (!response.results.length) {
+    console.log('データベースにアイテムがありません。');
+    return 'graph TD\nNo data found';
   }
+  // ここは1件目のページのFlowchartプロパティのrich_textをそのまま返す例
+  // 必要に応じて複数行まとめたり変換してください
+  const page = response.results[0];
+  const flowchartProp = page.properties.Flowchart;
+  if (!flowchartProp || !flowchartProp.rich_text.length) {
+    console.log('Flowchartプロパティが空です。');
+    return 'graph TD\nNo flowchart data';
+  }
+  const flowchartCode = flowchartProp.rich_text.map(t => t.plain_text).join('\n');
+  return flowchartCode;
+}
 
-  console.log('✅ フローチャートを更新しました');
-})();
+async function updateHtml(flowchartCode) {
+  const htmlPath = path.join(process.cwd(), 'public', 'index.html');
+  let html = await fs.readFile(htmlPath, 'utf-8');
+  html = html.replace('%%FLOWCHART_CODE%%', flowchartCode);
+  await fs.writeFile(htmlPath, html, 'utf-8');
+  console.log('public/index.html を更新しました。');
+}
+
+async function main() {
+  try {
+    const flowchartCode = await getFlowchartCode();
+    await updateHtml(flowchartCode);
+  } catch (error) {
+    console.error('エラー:', error);
+  }
+}
+
+main();
